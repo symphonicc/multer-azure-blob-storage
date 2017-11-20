@@ -1,0 +1,28 @@
+{
+    "compilerOptions": {
+        "watch": false,
+        "noImplicitAny": true,
+        "target": "es5",
+        // The 'commonjs' specification is needed in order to transpile
+        // proper NodeJS code. Otherwise there may be some code where
+        // certain features aren't supported in Node. For more context, 
+        // please look at the "Code Generation for Modules" section in 
+        // 'https://www.typescriptlang.org/docs/handbook/modules.html' 
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "typeRoots": ["./node_modules/@types"],
+        "lib": [
+            "es2015",
+            "dom"
+        ],
+        // Note, 'sourceMap' isn't a supported attribute in gulp, so it will be ignored
+        // (aka, no-op) when this file is processed by gulp. 
+        // Please see https://github.com/ivogabe/gulp-typescript for more context, which 
+        // notes the issue as unsupported.
+        "sourceMap": true,
+        "baseUrl": "src",
+        "outDir": "./lib",
+        // Generate the typings (d.ts) file
+        "declaration": true
+    }
+}

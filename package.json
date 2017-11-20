@@ -1,0 +1,47 @@
+{
+  "name": "multer-azure-blob-storage",
+  "version": "1.0.0",
+  "description": "ES5/6 & Typescript friendly multer storage engine for Azure's blob storage.",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "scripts": {
+    "lint": "tslint --project tsconfig.json",
+    "prebuild": "npm run lint",
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sliverb/multer-azure-blob-storage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Sliverb/multer-azure-blob-storage/issues"
+  },
+  "keywords": [
+    "multer",
+    "azure",
+    "express",
+    "file upload",
+    "azure storage",
+    "blob",
+    "typescript",
+    "ES5",
+    "ES6"
+  ],
+  "author": "Bayo O",
+  "license": "MIT",
+  "private": false,
+  "devDependencies": {
+    "@types/multer": "^1.3.6",
+    "@types/node": "^6.0.45",
+    "@types/node-uuid": "0.0.28",
+    "tslint": "^4.5.1",
+    "typescript": "^2.2.1"
+  },
+  "dependencies": {
+    "azure-storage": "^2.6.0",
+    "multer": "^1.3.0",
+    "node-uuid": "^1.4.8",
+    "path": "^0.12.7"
+  }
+}
