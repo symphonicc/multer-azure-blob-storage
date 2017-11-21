@@ -113,6 +113,7 @@ Key | Description | Note
 
 ### Configuration object
 Details of the configuration object that needs to be passed into the constructor of the MulterAzureStorage class.
+
 | Parameter Name | Type | Sample Value |
 |---|---|---|
 | `connectionString` | `string` | `'sup'` |
