@@ -172,9 +172,14 @@ If using the MulterAzureStorage class without passing in any configuration optio
 2. AZURE_STORAGE_ACCESS_KEY, for the `accessKey`.
 3. AZURE_STORAGE_ACCOUNT, for the `accountName`.
 
-
 ### Tests
 Not implemented yet
+
+### Thanks
+All great things are built on the shoulder of giants. I want to thank my giants for lending their shoulders:
+[mckalexee](https://github.com/mckalexee/multer-azure)
+[MantaCodeDevs](https://github.com/MantaCodeDevs/multer-azure-storage)
+
 
 ### License
 
