@@ -116,12 +116,12 @@ Details of the configuration object that needs to be passed into the constructor
 
 | Parameter Name | Type | Sample Value |
 |---|---|---|
-| `connectionString` | `string` | `'sup'` |
+| `connectionString` | `string` | `'DefaultEndpointsProtocol=https;AccountName=mystorageaccountname;AccountKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY;EndpointSuffix=core.windows.net'` |
 | `accessKey` | `string` | `'wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY'` |
 | `accountName` | `string` | `'mystorageaccountname'` |
-| `containerName` | `string` | `'documents'` |
+| `containerName` | `string | function: MASNameResolver` | `'documents'` or `(req: any, file: Express.Multer.File) => Promise<string>` |
 | `blobName` | `function: MASNameResolver` (optional) | `(req: any, file: Express.Multer.File) => Promise<string>` |
-| `containerAccessLevel` | `string` (optional) | `'blob'` |
+| `containerAccessLevel` | `string` (optional) | `'blob'` or `'container'` or `'private'` |
 | `urlExpirationTime` | `number` (optional) | `60` |
 
 For more information about the meaning of individual parameters please check [Azure documentation](https://azure.microsoft.com/en-us/documentation/articles/storage-nodejs-how-to-use-blob-storage/) on node.js integration.
