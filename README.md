@@ -177,10 +177,8 @@ Not implemented yet
 
 ### Thanks
 All great things are built on the shoulder of giants. I want to thank my giants for lending their shoulders:
-
-[mckalexee](https://github.com/mckalexee/multer-azure)
-
-[MantaCodeDevs](https://github.com/MantaCodeDevs/multer-azure-storage)
+- [mckalexee](https://github.com/mckalexee/multer-azure)
+- [MantaCodeDevs](https://github.com/MantaCodeDevs/multer-azure-storage)
 
 
 ### License
