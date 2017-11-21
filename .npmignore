@@ -2,4 +2,4 @@ tsconfig.json
 tslint.json
 lib/**/*js.map
 .vscode
-src
+src/
