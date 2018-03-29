@@ -14,8 +14,10 @@ import { Stream, Writable } from "stream";
 import { BlobService, date, BlobUtilities } from "azure-storage";
 
 // Custom types
+export type MetadataObj = { [k: string]: string };
 export type ContainerAccessLevel = 'blob' | 'container' | 'private';
 export type MASNameResolver = (req: Request, file: Express.Multer.File) => Promise<string>;
+export type MASObjectResolver = (req: Request, file: Express.Multer.File) => Promise<Object>;
 
 // Custom interfaces
 export interface IMASOptions {
@@ -25,6 +27,7 @@ export interface IMASOptions {
     urlExpirationTime?: number;
     blobName?: MASNameResolver;
     containerName: MASNameResolver | string;
+    metadata?: MASObjectResolver | MetadataObj;
     containerAccessLevel?: ContainerAccessLevel;
 }
 
@@ -64,6 +67,7 @@ export class MulterAzureStorage implements StorageEngine {
     private _blobService: BlobService;
     private _blobName: MASNameResolver;
     private _urlExpirationTime: number;
+    private _metadata: MASObjectResolver;
     private _containerName: MASNameResolver;
     private _containerAccessLevel: ContainerAccessLevel;
 
@@ -127,9 +131,28 @@ export class MulterAzureStorage implements StorageEngine {
                 break;
 
             case "blob":
-            default: 
+            default:
                 this._containerAccessLevel = this.DEFAULT_CONTAINER_ACCESS_LEVEL;
                 break;
+        }
+        // Check for metadata
+        if (!options.metadata) {
+            this._metadata = null;
+        } else {
+            switch (typeof options.metadata) {
+                case "object":
+                    this._metadata = this._promisifyStaticObj(<MetadataObj>options.metadata);
+                    break;
+
+                case "function":
+                    this._metadata = <MASObjectResolver>options.metadata;
+                    break;
+
+                default:
+                    // Nullify all other types
+                    this._metadata = null;
+                    break;
+            }
         }
         // Set proper blob name
         this._blobName = options.blobName ? options.blobName : this._generateBlobName;
@@ -158,13 +181,31 @@ export class MulterAzureStorage implements StorageEngine {
             // Create container if it doesnt exist
             await this._createContainerIfNotExists(containerName, this._containerAccessLevel);
             // Prep stream
-            const blobStream: Writable = this._blobService.createWriteStreamToBlockBlob(containerName, blobName, (cWSTBBError, result, response) => {
-                if (cWSTBBError) {
-                    cb(cWSTBBError);
-                } else {
-                    // All good. Continue...
-                }
-            });
+            let blobStream: Writable;
+            if (this._metadata == null) {
+                blobStream = this._blobService.createWriteStreamToBlockBlob(containerName, blobName, (cWSTBBError, result, response) => {
+                    if (cWSTBBError) {
+                        cb(cWSTBBError);
+                    } else {
+                        // All good. Continue...
+                    }
+                });
+            } else {
+                const metadata: MetadataObj = <MetadataObj>await this._metadata(req, file);
+                blobStream = this._blobService.createWriteStreamToBlockBlob(
+                    containerName,
+                    blobName,
+                    {
+                        metadata: metadata,
+                    },
+                    (cWSTBBError, result, response) => {
+                        if (cWSTBBError) {
+                            cb(cWSTBBError);
+                        } else {
+                            // All good. Continue...
+                        }
+                    });
+            }
             // Upload away
             file.stream.pipe(blobStream);
             // Listen for changes
@@ -320,6 +361,14 @@ export class MulterAzureStorage implements StorageEngine {
     private _promisifyStaticValue(value: string): MASNameResolver {
         return (req: Request, file: Express.Multer.File): Promise<string> => {
             return new Promise<string>((resolve, reject) => {
+                resolve(value);
+            });
+        };
+    }
+
+    private _promisifyStaticObj<T>(value: T): MASObjectResolver {
+        return (req: Request, file: Express.Multer.File): Promise<T> => {
+            return new Promise<T>((resolve, reject) => {
                 resolve(value);
             });
         };

@@ -6,3 +6,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## 1.0.0 - 2017-11-20
 
 - Initial release
+
+## 1.0.0 - 2017-11-20
+
+- Added the ability to include metadata per file uploaded

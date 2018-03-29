@@ -4,8 +4,12 @@
 import { Request } from "express";
 import { StorageEngine } from "multer";
 import { Stream } from "stream";
+export declare type MetadataObj = {
+    [k: string]: string;
+};
 export declare type ContainerAccessLevel = 'blob' | 'container' | 'private';
 export declare type MASNameResolver = (req: Request, file: Express.Multer.File) => Promise<string>;
+export declare type MASObjectResolver = (req: Request, file: Express.Multer.File) => Promise<Object>;
 export interface IMASOptions {
     accessKey?: string;
     accountName?: string;
@@ -13,6 +17,7 @@ export interface IMASOptions {
     urlExpirationTime?: number;
     blobName?: MASNameResolver;
     containerName: MASNameResolver | string;
+    metadata?: MASObjectResolver | MetadataObj;
     containerAccessLevel?: ContainerAccessLevel;
 }
 export interface MulterInFile extends Express.Multer.File {
@@ -41,6 +46,7 @@ export declare class MulterAzureStorage implements StorageEngine {
     private _blobService;
     private _blobName;
     private _urlExpirationTime;
+    private _metadata;
     private _containerName;
     private _containerAccessLevel;
     constructor(options: IMASOptions);
@@ -55,4 +61,5 @@ export declare class MulterAzureStorage implements StorageEngine {
     private _deleteBlobIfExists(containerName, blobName);
     private _generateBlobName(req, file);
     private _promisifyStaticValue(value);
+    private _promisifyStaticObj<T>(value);
 }

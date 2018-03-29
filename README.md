@@ -29,12 +29,21 @@ const resolveBlobName: MASNameResolver = (req: any, file: Express.Multer.File): 
     });
 };
 
+export type MetadataObj = { [k: string]: string };
+const resolveMetadata: MASObjectResolver = (req: any, file: Express.Multer.File): Promise<MetadataObj> => {
+    return new Promise<MetadataObj>((resolve, reject) => {
+        const metadata: MetadataObj = yourCustomLogic(req, file);
+        resolve(metadata);
+    });
+};
+
 const azureStorage: MulterAzureStorage = new MulterAzureStorage({
     connectionString: 'DefaultEndpointsProtocol=https;AccountName=mystorageaccountname;AccountKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY;EndpointSuffix=core.windows.net',
     accessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY',
     accountName: 'mystorageaccountname',
     containerName: 'documents',
     blobName: resolveBlobName,
+    metadata: resolveMetadata,
     containerAccessLevel: 'blob',
     urlExpirationTime: 60
 });
@@ -72,12 +81,20 @@ const resolveBlobName = (req, file) => {
     });
 };
 
+const resolveMetadata = (req, file) => {
+    return new Promise((resolve, reject) => {
+        const metadata = yourCustomLogic(req, file);
+        resolve(metadata);
+    });
+};
+
 const azureStorage = new MulterAzureStorage({
     connectionString: 'DefaultEndpointsProtocol=https;AccountName=mystorageaccountname;AccountKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY;EndpointSuffix=core.windows.net',
     accessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY',
     accountName: 'mystorageaccountname',
     containerName: 'documents',
     blobName: resolveBlobName,
+    metadata: resolveMetadata,
     containerAccessLevel: 'blob',
     urlExpirationTime: 60
 });
@@ -121,6 +138,7 @@ Details of the configuration object that needs to be passed into the constructor
 | `accessKey` | `string` | `'wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY'` |
 | `accountName` | `string` | `'mystorageaccountname'` |
 | `containerName` | `string` or `function: MASNameResolver` | `'documents'` or `(req: any, file: Express.Multer.File) => Promise<string>` |
+| `metadata` | `{ [k: string]: string }` or `function: MASObjectResolver` | `'{author: John Doe; album: ASOT}'` or `(req: any, file: Express.Multer.File) => Promise<{[k: string]: string}>` |
 | `blobName` | `function: MASNameResolver` (optional) | `(req: any, file: Express.Multer.File) => Promise<string>` |
 | `containerAccessLevel` | `string` (optional) | `'blob'` or `'container'` or `'private'` |
 | `urlExpirationTime` | `number` (optional) | `60` |
@@ -147,6 +165,17 @@ const resolveName: MASNameResolver = (req: any, file: Express.Multer.File): Prom
         // Compute containerName or blobName with your custom logic.
         const computedName: string = yourCustomLogic(req, file);
         resolve(computedName);
+    });
+};
+```
+
+`multer-azure-blob-storage` also allows you to add/customize `metadata` per request before uploading the file. This can be done by proving a `MASObjectResolver` function in the configuation object for the desired parameter.
+``` javascript
+export type MetadataObj = { [k: string]: string };
+const resolveMetadata: MASObjectResolver = (req: any, file: Express.Multer.File): Promise<MetadataObj> => {
+    return new Promise<MetadataObj>((resolve, reject) => {
+        const metadata: MetadataObj = yourCustomLogic(req, file);
+        resolve(metadata);
     });
 };
 ```
