@@ -1,6 +1,6 @@
 {
   "name": "multer-azure-blob-storage",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "ES5/6 & Typescript friendly multer storage engine for Azure's blob storage.",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
