@@ -6,7 +6,7 @@
 // *********************************************************
 
 // Node Modules
-import { v4 } from "node-uuid";
+import { v4 } from "uuid";
 import { extname } from "path";
 import { Request } from "express";
 import { StorageEngine } from "multer";
