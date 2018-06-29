@@ -10,7 +10,7 @@ npm i -S multer-azure-blob-storage
 ```
 or
 ```
-yard add multer-azure-blob-storage
+yarn add multer-azure-blob-storage
 ```
 
 ### Usage
@@ -113,7 +113,7 @@ More details on using `upload` can be found in the [Multer documentation](https:
 
 ### File information
 
-Multer Azure Blob Storage will return the following information in each file uploaded. This can be found in the req.files param:
+Multer Azure Blob Storage will return the following information in each file uploaded. This can be found in the `req.files` param:
 
 Key | Description | Note
 ---|---|---
@@ -147,7 +147,7 @@ For more information about the meaning of individual parameters please check [Az
 
 ### Defaults
 
-For the optional parameters in the configuration object for the MulterAzureStorage class, here are the default fallback:
+For the optional parameters in the configuration object for the MulterAzureStorage class, here are the default fallbacks:
 - `containerAccessLevel`: blob
 - `urlExpirationTime`: 60 minutes
 - `blobName`: Date.now() + '-' + uuid.v4() + path.extname(file.originalname). This results in a url safe filename that looks like `'1511161727560-d83d24c8-d213-444c-ba72-316c7a858805.png'`
