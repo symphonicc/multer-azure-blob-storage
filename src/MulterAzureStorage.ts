@@ -15,7 +15,6 @@ import { BlobService, date, BlobUtilities } from "azure-storage";
 
 // Custom types
 export type MetadataObj = { [k: string]: string };
-export type ContainerAccessLevel = 'blob' | 'container' | 'private';
 export type MASNameResolver = (req: Request, file: Express.Multer.File) => Promise<string>;
 export type MASObjectResolver = (req: Request, file: Express.Multer.File) => Promise<Object>;
 
@@ -28,7 +27,7 @@ export interface IMASOptions {
     blobName?: MASNameResolver;
     containerName: MASNameResolver | string;
     metadata?: MASObjectResolver | MetadataObj;
-    containerAccessLevel?: ContainerAccessLevel;
+    containerAccessLevel?: string;
 }
 
 export interface MulterInFile extends Express.Multer.File {
@@ -61,7 +60,7 @@ export class MASError implements Error {
 export class MulterAzureStorage implements StorageEngine {
     private readonly DEFAULT_URL_EXPIRATION_TIME: number = 60;
     private readonly DEFAULT_UPLOAD_CONTAINER: string = "default-container";
-    private readonly DEFAULT_CONTAINER_ACCESS_LEVEL: ContainerAccessLevel = "private";
+    private readonly DEFAULT_CONTAINER_ACCESS_LEVEL: string = /* aka private */ BlobUtilities.BlobContainerPublicAccessType.OFF;
 
     private _error: MASError;
     private _blobService: BlobService;
@@ -69,7 +68,7 @@ export class MulterAzureStorage implements StorageEngine {
     private _urlExpirationTime: number;
     private _metadata: MASObjectResolver;
     private _containerName: MASNameResolver;
-    private _containerAccessLevel: ContainerAccessLevel;
+    private _containerAccessLevel: string;
 
     constructor(options: IMASOptions) {
         // Init error array
@@ -119,21 +118,26 @@ export class MulterAzureStorage implements StorageEngine {
         }
         // Set container access level
         switch (options.containerAccessLevel) {
-            case "container":
-                this._containerAccessLevel = "container";
+            case BlobUtilities.BlobContainerPublicAccessType.CONTAINER:
+                this._containerAccessLevel = BlobUtilities.BlobContainerPublicAccessType.CONTAINER;
                 break;
 
-            case "private":
+            case BlobUtilities.BlobContainerPublicAccessType.OFF:
                 // For private, unsetting the container access level will
                 // ensure that _createContainerIfNotExists doesn't set one
                 // which results in a private container.
-                this._containerAccessLevel = null;
+                this._containerAccessLevel = BlobUtilities.BlobContainerPublicAccessType.OFF;
                 break;
 
-            case "blob":
+            case BlobUtilities.BlobContainerPublicAccessType.BLOB:
+                this._containerAccessLevel = BlobUtilities.BlobContainerPublicAccessType.BLOB;
+                break;
+                
             default:
+                // Fallback to the default container level
                 this._containerAccessLevel = this.DEFAULT_CONTAINER_ACCESS_LEVEL;
                 break;
+
         }
         // Check for metadata
         if (!options.metadata) {
@@ -272,7 +276,7 @@ export class MulterAzureStorage implements StorageEngine {
         });
     }
 
-    private _createContainerIfNotExists(name: string, accessLevel?: ContainerAccessLevel): Promise<void> {
+    private _createContainerIfNotExists(name: string, accessLevel?: string): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             // if no access level is set, it defaults to private
             if (accessLevel) {
