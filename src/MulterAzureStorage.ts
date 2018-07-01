@@ -61,7 +61,7 @@ export class MASError implements Error {
 export class MulterAzureStorage implements StorageEngine {
     private readonly DEFAULT_URL_EXPIRATION_TIME: number = 60;
     private readonly DEFAULT_UPLOAD_CONTAINER: string = "default-container";
-    private readonly DEFAULT_CONTAINER_ACCESS_LEVEL: ContainerAccessLevel = "blob";
+    private readonly DEFAULT_CONTAINER_ACCESS_LEVEL: ContainerAccessLevel = "private";
 
     private _error: MASError;
     private _blobService: BlobService;
