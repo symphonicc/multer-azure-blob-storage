@@ -7,7 +7,6 @@ import { Stream } from "stream";
 export declare type MetadataObj = {
     [k: string]: string;
 };
-export declare type ContainerAccessLevel = 'blob' | 'container' | 'private';
 export declare type MASNameResolver = (req: Request, file: Express.Multer.File) => Promise<string>;
 export declare type MASObjectResolver = (req: Request, file: Express.Multer.File) => Promise<Object>;
 export interface IMASOptions {
@@ -18,7 +17,7 @@ export interface IMASOptions {
     blobName?: MASNameResolver;
     containerName: MASNameResolver | string;
     metadata?: MASObjectResolver | MetadataObj;
-    containerAccessLevel?: ContainerAccessLevel;
+    containerAccessLevel?: string;
 }
 export interface MulterInFile extends Express.Multer.File {
     stream: Stream;
