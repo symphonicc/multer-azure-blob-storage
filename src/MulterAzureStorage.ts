@@ -200,6 +200,10 @@ export class MulterAzureStorage implements StorageEngine {
                     containerName,
                     blobName,
                     {
+                        contentSettings: {
+                            contentType: file.mimetype,
+                            contentDisposition: 'inline'
+                        },
                         metadata: metadata,
                     },
                     (cWSTBBError, result, response) => {
