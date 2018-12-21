@@ -187,7 +187,14 @@ export class MulterAzureStorage implements StorageEngine {
             // Prep stream
             let blobStream: Writable;
             if (this._metadata == null) {
-                blobStream = this._blobService.createWriteStreamToBlockBlob(containerName, blobName, (cWSTBBError, result, response) => {
+                blobStream = this._blobService.createWriteStreamToBlockBlob(containerName, blobName,
+                    {
+                        contentSettings: {
+                            contentType: file.mimetype,
+                            contentDisposition: 'inline'
+                        }
+                    }, 
+                    (cWSTBBError, result, response) => {
                     if (cWSTBBError) {
                         cb(cWSTBBError);
                     } else {
