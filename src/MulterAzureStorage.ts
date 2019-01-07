@@ -236,7 +236,7 @@ export class MulterAzureStorage implements StorageEngine {
         }
     }
 
-    async _removeFile(req: Request, file: Express.Multer.File, cb: (error: Error) => void) {
+    async _removeFile(req: Request, file: MulterOutFile, cb: (error: Error) => void) {
         // Ensure we have no errors during setup
         if (this._error.errorList.length > 0) {
             cb(this._error);
@@ -251,7 +251,7 @@ export class MulterAzureStorage implements StorageEngine {
                 this._error.message = "Cannot use container. Check if provided options are correct.";
                 cb(this._error);
             } else {
-                await this._deleteBlobIfExists(containerName, file.filename);
+                await this._deleteBlobIfExists(containerName, file.blobName);
                 cb(null);
             }
         } catch (rFError) {
