@@ -50,7 +50,7 @@ export declare class MulterAzureStorage implements StorageEngine {
     private _containerAccessLevel;
     constructor(options: IMASOptions);
     _handleFile(req: Request, file: MulterInFile, cb: (error?: any, info?: Partial<MulterOutFile>) => void): Promise<void>;
-    _removeFile(req: Request, file: Express.Multer.File, cb: (error: Error) => void): Promise<void>;
+    _removeFile(req: Request, file: MulterOutFile, cb: (error: Error) => void): Promise<void>;
     /** Helpers */
     private _doesContainerExists(containerName);
     private _createContainerIfNotExists(name, accessLevel?);
