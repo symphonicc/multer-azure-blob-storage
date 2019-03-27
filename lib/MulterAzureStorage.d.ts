@@ -62,3 +62,4 @@ export declare class MulterAzureStorage implements StorageEngine {
     private _promisifyStaticValue(value);
     private _promisifyStaticObj<T>(value);
 }
+export default MulterAzureStorage;

@@ -389,3 +389,5 @@ export class MulterAzureStorage implements StorageEngine {
         };
     }
 }
+
+export default MulterAzureStorage;
