@@ -17,6 +17,7 @@ export interface IMASOptions {
     blobName?: MASNameResolver;
     containerName: MASNameResolver | string;
     metadata?: MASObjectResolver | MetadataObj;
+    contentSettings?: MASObjectResolver | MetadataObj;
     containerAccessLevel?: string;
 }
 export interface MulterInFile extends Express.Multer.File {
@@ -46,6 +47,7 @@ export declare class MulterAzureStorage implements StorageEngine {
     private _blobName;
     private _urlExpirationTime;
     private _metadata;
+    private _contentSettings;
     private _containerName;
     private _containerAccessLevel;
     constructor(options: IMASOptions);

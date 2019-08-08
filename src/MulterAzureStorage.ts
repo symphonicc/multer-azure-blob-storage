@@ -27,6 +27,7 @@ export interface IMASOptions {
     blobName?: MASNameResolver;
     containerName: MASNameResolver | string;
     metadata?: MASObjectResolver | MetadataObj;
+    contentSettings?: MASObjectResolver | MetadataObj;
     containerAccessLevel?: string;
 }
 
@@ -67,6 +68,7 @@ export class MulterAzureStorage implements StorageEngine {
     private _blobName: MASNameResolver;
     private _urlExpirationTime: number;
     private _metadata: MASObjectResolver;
+    private _contentSettings: MASObjectResolver;
     private _containerName: MASNameResolver;
     private _containerAccessLevel: string;
 
@@ -158,6 +160,25 @@ export class MulterAzureStorage implements StorageEngine {
                     break;
             }
         }
+        // Check for user defined properties
+        if (!options.contentSettings) {
+            this._contentSettings = null;
+        } else {
+            switch (typeof options.contentSettings) {
+                case "object":
+                    this._contentSettings = this._promisifyStaticObj(<MetadataObj>options.contentSettings);
+                    break;
+
+                case "function":
+                    this._contentSettings = <MASObjectResolver>options.contentSettings;
+                    break;
+
+                default:
+                    // Nullify all other types
+                    this._contentSettings = null;
+                    break;
+            }
+        }
         // Set proper blob name
         this._blobName = options.blobName ? options.blobName : this._generateBlobName;
         // Set url expiration time
@@ -186,13 +207,19 @@ export class MulterAzureStorage implements StorageEngine {
             await this._createContainerIfNotExists(containerName, this._containerAccessLevel);
             // Prep stream
             let blobStream: Writable;
+            let contentSettings: MetadataObj;
+            if (this._contentSettings == null) {
+                contentSettings = {
+                    contentType: file.mimetype,
+                    contentDisposition: 'inline'
+                };
+            } else {
+                contentSettings = <MetadataObj>await this._contentSettings(req, file);
+            }
             if (this._metadata == null) {
                 blobStream = this._blobService.createWriteStreamToBlockBlob(containerName, blobName,
                     {
-                        contentSettings: {
-                            contentType: file.mimetype,
-                            contentDisposition: 'inline'
-                        }
+                        contentSettings
                     }, 
                     (cWSTBBError, result, response) => {
                     if (cWSTBBError) {
@@ -207,11 +234,8 @@ export class MulterAzureStorage implements StorageEngine {
                     containerName,
                     blobName,
                     {
-                        contentSettings: {
-                            contentType: file.mimetype,
-                            contentDisposition: 'inline'
-                        },
-                        metadata: metadata,
+                        contentSettings,
+                        metadata,
                     },
                     (cWSTBBError, result, response) => {
                         if (cWSTBBError) {
