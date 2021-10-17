@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Added the ability to include metadata per file uploaded
 
-## 1.0.4 - 2021-10-17
+## 1.1.0 - 2021-10-17
 
 - Dependency updates
 - General cleanup
