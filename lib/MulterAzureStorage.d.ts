@@ -1,9 +1,5 @@
-/// <reference types="express" />
-/// <reference types="multer" />
-/// <reference types="node" />
 import { Request } from "express";
 import { StorageEngine } from "multer";
-import { Stream } from "stream";
 export declare type MetadataObj = {
     [k: string]: string;
 };
@@ -19,9 +15,6 @@ export interface IMASOptions {
     metadata?: MASObjectResolver | MetadataObj;
     contentSettings?: MASObjectResolver | MetadataObj;
     containerAccessLevel?: string;
-}
-export interface MulterInFile extends Express.Multer.File {
-    stream: Stream;
 }
 export interface MulterOutFile extends Express.Multer.File {
     url: string;
@@ -51,16 +44,17 @@ export declare class MulterAzureStorage implements StorageEngine {
     private _containerName;
     private _containerAccessLevel;
     constructor(options: IMASOptions);
-    _handleFile(req: Request, file: MulterInFile, cb: (error?: any, info?: Partial<MulterOutFile>) => void): Promise<void>;
+    _handleFile(req: Request, file: Express.Multer.File, cb: (error?: any, info?: Partial<MulterOutFile>) => void): Promise<void>;
     _removeFile(req: Request, file: MulterOutFile, cb: (error: Error) => void): Promise<void>;
     /** Helpers */
-    private _doesContainerExists(containerName);
-    private _createContainerIfNotExists(name, accessLevel?);
-    private _getSasToken(containerName, blobName, expiration);
-    private _getUrl(containerName, blobName, expiration?);
-    private _getBlobProperties(containerName, blobName);
-    private _deleteBlobIfExists(containerName, blobName);
-    private _generateBlobName(req, file);
-    private _promisifyStaticValue(value);
-    private _promisifyStaticObj<T>(value);
+    private _doesContainerExists;
+    private _createContainerIfNotExists;
+    private _getSasToken;
+    private _getUrl;
+    private _getBlobProperties;
+    private _deleteBlobIfExists;
+    private _generateBlobName;
+    private _promisifyStaticValue;
+    private _promisifyStaticObj;
 }
+export default MulterAzureStorage;

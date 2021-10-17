@@ -165,7 +165,7 @@ For more information about the meaning of individual parameters please check [Az
 
 For the optional parameters in the configuration object for the MulterAzureStorage class, here are the default fallbacks:
 - `containerAccessLevel`: blob
-- `urlExpirationTime`: 60 minutes
+- `urlExpirationTime`: 60 minutes. NOTE: To unset this property and not revert to the default, pass in `-1`
 - `blobName`: Date.now() + '-' + uuid.v4() + path.extname(file.originalname). This results in a url safe filename that looks like `'1511161727560-d83d24c8-d213-444c-ba72-316c7a858805.png'`
 
 ### File naming
