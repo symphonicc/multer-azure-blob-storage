@@ -17,3 +17,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - General cleanup
 - Allow resolving contentSettings like metadata. (Credit [hstahl](https://github.com/hstahl))
 - Allow default export. (Credit [jheysen](https://github.com/jheysen))
+
+## 1.2.0
+
+- Dependency updates
+- Remove pinning of dependency versions in favor of semantic versioning
