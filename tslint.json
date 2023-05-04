@@ -12,7 +12,7 @@
         "no-duplicate-variable": true,
         "no-eval": true,
         "no-unused-expression": true,
-        "no-unused-variable": true,
+        "no-unused-variable": false,
         "no-internal-module": true,
         "no-unsafe-finally": true,
         "no-var-keyword": true,

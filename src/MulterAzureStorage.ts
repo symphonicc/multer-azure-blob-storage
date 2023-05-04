@@ -10,8 +10,9 @@ import { v4 } from "uuid";
 import { extname } from "path";
 import { Request } from "express";
 import { StorageEngine } from "multer";
-import { Writable } from "stream";
-import { BlobService, date, BlobUtilities } from "azure-storage";
+import { BlobGetPropertiesResponse, BlobSASPermissions, BlobServiceClient, ContainerClient, ContainerCreateIfNotExistsResponse, ContainerDeleteIfExistsResponse, generateBlobSASQueryParameters, PublicAccessType, StorageSharedKeyCredential } from "@azure/storage-blob";
+// import { BlobService, date, BlobUtilities } from "azure-storage";
+
 
 // Custom types
 export type MetadataObj = { [k: string]: string };
@@ -57,16 +58,17 @@ export class MASError implements Error {
 export class MulterAzureStorage implements StorageEngine {
     private readonly DEFAULT_URL_EXPIRATION_TIME: number = 60; // Minutes
     private readonly DEFAULT_UPLOAD_CONTAINER: string = "default-container";
-    private readonly DEFAULT_CONTAINER_ACCESS_LEVEL: string = /* aka private */ BlobUtilities.BlobContainerPublicAccessType.OFF;
+    private readonly DEFAULT_CONTAINER_ACCESS_LEVEL: PublicAccessType = "blob";
 
     private _error: MASError;
-    private _blobService: BlobService;
+    private _blobService: BlobServiceClient;
     private _blobName: MASNameResolver;
     private _urlExpirationTime: number | null;
     private _metadata: MASObjectResolver;
     private _contentSettings: MASObjectResolver;
     private _containerName: MASNameResolver;
-    private _containerAccessLevel: string;
+    private _containerAccessLevel: PublicAccessType;
+    private _storageSharedKeyCredential: StorageSharedKeyCredential;
 
     constructor(options: IMASOptions) {
         // Init error array
@@ -116,20 +118,26 @@ export class MulterAzureStorage implements StorageEngine {
         }
         // Set container access level
         switch (options.containerAccessLevel) {
-            case BlobUtilities.BlobContainerPublicAccessType.CONTAINER:
-                this._containerAccessLevel = BlobUtilities.BlobContainerPublicAccessType.CONTAINER;
+            case "container" :
+                this._containerAccessLevel = "container";
                 break;
+            // case BlobUtilities.BlobContainerPublicAccessType.CONTAINER:
+            //     this._containerAccessLevel = BlobUtilities.BlobContainerPublicAccessType.CONTAINER;
+            //     break;
 
-            case BlobUtilities.BlobContainerPublicAccessType.OFF:
-                // For private, unsetting the container access level will
-                // ensure that _createContainerIfNotExists doesn't set one
-                // which results in a private container.
-                this._containerAccessLevel = BlobUtilities.BlobContainerPublicAccessType.OFF;
-                break;
+            // case BlobUtilities.BlobContainerPublicAccessType.OFF:
+            //     // For private, unsetting the container access level will
+            //     // ensure that _createContainerIfNotExists doesn't set one
+            //     // which results in a private container.
+            //     this._containerAccessLevel = BlobUtilities.BlobContainerPublicAccessType.OFF;
+            //     break;
 
-            case BlobUtilities.BlobContainerPublicAccessType.BLOB:
-                this._containerAccessLevel = BlobUtilities.BlobContainerPublicAccessType.BLOB;
+            case "blob":
+                this._containerAccessLevel = "blob";
                 break;
+            // case BlobUtilities.BlobContainerPublicAccessType.BLOB:
+            //     this._containerAccessLevel = BlobUtilities.BlobContainerPublicAccessType.BLOB;
+            //     break;
 
             default:
                 // Fallback to the default container level
@@ -183,10 +191,12 @@ export class MulterAzureStorage implements StorageEngine {
             : (options.urlExpirationTime && (typeof options.urlExpirationTime === "number") && (options.urlExpirationTime > 0))
                 ? +options.urlExpirationTime
                 : this.DEFAULT_URL_EXPIRATION_TIME;
+                
         // Init blob service
         this._blobService = options.connectionString ?
-            new BlobService(options.connectionString) :
-            new BlobService(options.accountName, options.accessKey);
+            BlobServiceClient.fromConnectionString(options.connectionString) :
+            new BlobServiceClient(`https://${options.accountName}.blob.core.windows.net`,
+            new StorageSharedKeyCredential(options.accountName, options.accessKey));
     }
 
     async _handleFile(req: Request, file: Express.Multer.File, cb: (error?: any, info?: Partial<MulterOutFile>) => void) {
@@ -204,8 +214,9 @@ export class MulterAzureStorage implements StorageEngine {
             // Create container if it doesnt exist
             await this._createContainerIfNotExists(containerName, this._containerAccessLevel);
             // Prep stream
-            let blobStream: Writable;
+            // let blobStream: Writable;
             let contentSettings: MetadataObj;
+            
             if (this._contentSettings == null) {
                 contentSettings = {
                     contentType: file.mimetype,
@@ -214,56 +225,95 @@ export class MulterAzureStorage implements StorageEngine {
             } else {
                 contentSettings = <MetadataObj>await this._contentSettings(req, file);
             }
-            if (this._metadata == null) {
-                blobStream = this._blobService.createWriteStreamToBlockBlob(containerName, blobName,
-                    {
-                        contentSettings
-                    },
-                    (cWSTBBError, _result, _response) => {
-                        if (cWSTBBError) {
-                            cb(cWSTBBError);
-                        } else {
-                            // All good. Continue...
-                        }
-                    });
-            } else {
-                const metadata: MetadataObj = <MetadataObj>await this._metadata(req, file);
-                blobStream = this._blobService.createWriteStreamToBlockBlob(
-                    containerName,
-                    blobName,
-                    {
-                        contentSettings,
-                        metadata,
-                    },
-                    (cWSTBBError, _result, _response) => {
-                        if (cWSTBBError) {
-                            cb(cWSTBBError);
-                        } else {
-                            // All good. Continue...
-                        }
-                    });
-            }
+            
+            // if (this._metadata == null) {    
+            // blobStream = this._blobService.createWriteStreamToBlockBlob(containerName, blobName,
+            //         {
+            //             contentSettings
+            //         },
+            //         (cWSTBBError: any, _result: any, _response: any) => {
+            //             if (cWSTBBError) {
+            //                 cb(cWSTBBError);
+            //             } else {
+            //                 // All good. Continue...
+            //             }
+            //         });
+            // } else {
+            //     const metadata: MetadataObj = <MetadataObj>await this._metadata(req, file);
+            //     blobStream = this._blobService.createWriteStreamToBlockBlob(
+            //         containerName,
+            //         blobName,
+            //         {
+            //             contentSettings,
+            //             metadata,
+            //         },
+            //         (cWSTBBError: any, _result: any, _response: any) => {
+            //             if (cWSTBBError) {
+            //                 cb(cWSTBBError);
+            //             } else {
+            //                 // All good. Continue...
+            //             }
+            //         });
+            // }
+
             // Upload away
-            file.stream.pipe(blobStream);
+            
+            const containerClient = this._blobService.getContainerClient(containerName);
+            const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+            const ONE_MEGABYTE = 1024 * 1024;
+            const uploadOptions = { bufferSize: 4 * ONE_MEGABYTE, maxBuffers: 20 };
+    
+            blockBlobClient.uploadStream(file.stream,
+                uploadOptions.bufferSize, 
+                uploadOptions.maxBuffers,
+                {   metadata: <MetadataObj>await this._metadata(req, file),
+                    blobHTTPHeaders: { blobContentType: file.mimetype } }
+                )
+                .then(async() => {
+                    const url: string = this._getUrl(containerName, blobName);
+            
+                    const blobProperties: BlobGetPropertiesResponse = await this._getBlobProperties(containerName, blobName);
+                    const intermediateFile: Partial<MulterOutFile> = {
+                        url: url,
+                        blobName: blobName,
+                        etag: blobProperties.etag,
+                        
+                        blobType: blobProperties.blobType,
+                        metadata: blobProperties.metadata,
+                        container: containerName,
+                        blobSize: blobProperties.contentLength.toString()
+                    };
+                    const finalFile: Partial<MulterOutFile> = Object.assign({}, file, intermediateFile);
+                    cb(null, finalFile);
+                }
+
+                ).catch(bSError =>
+                    cb(bSError)
+                );
+            
+
+            // file.stream.pipe(blobStream);
             // Listen for changes
-            blobStream.on("close", async () => {
-                const url: string = this._getUrl(containerName, blobName);
-                const blobProperties: BlobService.BlobResult = await this._getBlobProperties(containerName, blobName);
-                const intermediateFile: Partial<MulterOutFile> = {
-                    url: url,
-                    blobName: blobName,
-                    etag: blobProperties.etag,
-                    blobType: blobProperties.blobType,
-                    metadata: blobProperties.metadata,
-                    container: blobProperties.container,
-                    blobSize: blobProperties.contentLength
-                };
-                const finalFile: Partial<MulterOutFile> = Object.assign({}, file, intermediateFile);
-                cb(null, finalFile);
-            });
-            blobStream.on("error", (bSError) => {
-                cb(bSError);
-            });
+            // blobStream.on("close", async () => {
+            //     const url: string = this._getUrl(containerName, blobName);
+            
+            //     const blobProperties: BlobGetPropertiesResponse = await this._getBlobProperties(containerName, blobName);
+            //     const intermediateFile: Partial<MulterOutFile> = {
+            //         url: url,
+            //         blobName: blobName,
+            //         etag: blobProperties.etag,
+                    
+            //         blobType: blobProperties.blobType,
+            //         metadata: blobProperties.metadata,
+            //         container: containerName,
+            //         blobSize: blobProperties.contentLength.toString()
+            //     };
+            //     const finalFile: Partial<MulterOutFile> = Object.assign({}, file, intermediateFile);
+            //     cb(null, finalFile);
+            // });
+            // blobStream.on("error", (bSError) => {
+            //     cb(bSError);
+            // });
         } catch (hFError) {
             cb(hFError);
         }
@@ -279,7 +329,7 @@ export class MulterAzureStorage implements StorageEngine {
         // Begin File removal
         try {
             const containerName: string = await this._containerName(req, file);
-            const result: BlobService.ContainerResult = await this._doesContainerExists(containerName);
+            const result = await this._doesContainerExists(containerName);
             if (!result.exists) {
                 this._error.message = "Cannot use container. Check if provided options are correct.";
                 cb(this._error);
@@ -295,98 +345,72 @@ export class MulterAzureStorage implements StorageEngine {
 
     /** Helpers */
 
-    private _doesContainerExists(containerName: string): Promise<BlobService.ContainerResult> {
-        return new Promise<BlobService.ContainerResult>((resolve, reject) => {
-            this._blobService.doesContainerExist(
-                containerName,
-                (error, result, _response) => {
-                    if (error) {
-                        reject(error);
-                    } else {
-                        resolve(result);
-                    }
-                });
-        });
+    private _doesContainerExists(containerName: string): ContainerClient {
+        return this._blobService.getContainerClient(containerName);
     }
 
-    private _createContainerIfNotExists(name: string, accessLevel?: string): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
+    private _createContainerIfNotExists(name: string, accessLevel?: PublicAccessType): Promise<ContainerCreateIfNotExistsResponse> {
+        // return new Promise<void>((resolve, reject) => {
             // if no access level is set, it defaults to private
-            if (accessLevel) {
-                this._blobService.createContainerIfNotExists(
-                    name,
-                    { publicAccessLevel: accessLevel },
-                    (error, _result, _response) => {
-                        if (error) {
-                            reject(error);
-                        } else {
-                            resolve();
-                        }
-                    });
+            const containerClient = this._blobService.getContainerClient(name);
+            if (accessLevel) { 
+                return containerClient.createIfNotExists({access: accessLevel});
+                
             } else {
-                this._blobService.createContainerIfNotExists(
-                    name,
-                    (error, _result, _response) => {
-                        if (error) {
-                            reject(error);
-                        } else {
-                            resolve();
-                        }
-                    });
+                return containerClient.createIfNotExists();
             }
-        });
+        }
+        
 
-    }
+    // private _getSasToken(
+    //     containerName: string,
+    //     blobName: string,
+    //     expiration: number | null
+    // ): string {
+        
+    //     //const _storageSharedKeyCredential = new StorageSharedKeyCredential(;
+    //     // const sasToken = generateBlobSASQueryParameters({
+    //     //     containerName,
+    //     //     blobName,
+    //     //     permissions: BlobSASPermissions.parse("r"), 
+    //     //     startsOn: new Date(),
+    //     //     expiresOn:  (expiration == null) ? undefined : new Date(Date.now() + expiration * 60000)
+            
+    //     // },
+    //     //   this._blobService.generateAccountSasUrl  
+    //     // ).toString();
 
-    private _getSasToken(
-        containerName: string,
-        blobName: string,
-        expiration: number | null
-    ): string {
-        return this._blobService.generateSharedAccessSignature(
-            containerName,
-            blobName,
-            {
-                AccessPolicy: {
-                    Expiry: (expiration == null) ? undefined : date.minutesFromNow(expiration),
-                    Permissions: BlobUtilities.SharedAccessPermissions.READ
-                }
-            });
-    }
+    //     // return sasToken;
+
+
+    //     // return this._blobService.generateSharedAccessSignature(
+    //     //     containerName,
+    //     //     blobName,
+    //     //     {
+    //     //         AccessPolicy: {
+    //     //             Expiry: (expiration == null) ? undefined : Date.minutesFromNow(expiration),
+    //     //             Permissions: BlobUtilities.SharedAccessPermissions.READ
+    //     //         }
+    //     //     });
+    // }
 
     private _getUrl(containerName: string, blobName: string, expiration: number | null = this._urlExpirationTime): string {
-        const sasToken = this._getSasToken(containerName, blobName, expiration);
-        return this._blobService.getUrl(containerName, blobName, sasToken);
+        // const sasToken = this._getSasToken(containerName, blobName, expiration);
+        // const sasUrl = this._blobService.url + "?" + sasToken;
+        return this._blobService.generateAccountSasUrl(
+            (expiration == null) ? undefined : new Date(Date.now() + expiration * 60000),                   
+        )
+        ;
+        // return this._blobService.getUrl(containerName, blobName, sasToken);
     }
 
-    private _getBlobProperties(containerName: string, blobName: string): Promise<BlobService.BlobResult> {
-        return new Promise<BlobService.BlobResult>((resolve, reject) => {
-            this._blobService.getBlobProperties(
-                containerName,
-                blobName,
-                (error, result, _response) => {
-                    if (error) {
-                        reject(error);
-                    } else {
-                        resolve(result);
-                    }
-                });
-        });
+    private _getBlobProperties(containerName: string, blobName: string): Promise<BlobGetPropertiesResponse> {
+        return this._blobService.getContainerClient(containerName).getBlobClient(blobName).getProperties();
     }
 
-    private _deleteBlobIfExists(containerName: string, blobName: string): Promise<void> {
-        return new Promise<void>((resolve, reject) => {
-            this._blobService.deleteBlobIfExists(
-                containerName,
-                blobName,
-                (error, _result, _response) => {
-                    if (error) {
-                        reject(error);
-                    } else {
-                        resolve();
-                    }
-                });
-        });
+    private _deleteBlobIfExists(containerName: string, blobName: string): Promise<ContainerDeleteIfExistsResponse> {
+        const containerClient = this._blobService.getContainerClient(containerName);
+        return containerClient.deleteIfExists();
     }
 
     private _generateBlobName(_req: Request, file: Express.Multer.File): Promise<string> {
