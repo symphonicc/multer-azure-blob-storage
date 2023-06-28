@@ -1,11 +1,11 @@
 {
   "name": "multer-azure-blob-storage",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "ES5/6 & Typescript friendly multer storage engine for Azure's blob storage.",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "scripts": {
-    "lint": "tslint --project tsconfig.json",
+    "lint": "eslint src/**/*.ts",
     "prebuild": "npm run lint",
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -26,7 +26,8 @@
     "blob",
     "typescript",
     "ES5",
-    "ES6"
+    "ES6",
+    "@azure/blob-storage"
   ],
   "author": "Bayo O",
   "license": "MIT",
@@ -35,11 +36,14 @@
     "@types/multer": "^1.4.7",
     "@types/node": "^18.6.2",
     "@types/uuid": "^8.3.4",
-    "tslint": "^6.1.3",
+    "@typescript-eslint/eslint-plugin": "^5.60.1",
+    "@typescript-eslint/parser": "^5.60.1",
+    "eslint": "^8.43.0",
     "typescript": "^4.7.4"
   },
   "dependencies": {
-    "azure-storage": "^2.10.7",
+    "@azure/identity": "^3.2.3",
+    "@azure/storage-blob": "^12.14.0",
     "express": "^4.18.1",
     "multer": "^1.4.5-lts.1",
     "path": "^0.12.7",

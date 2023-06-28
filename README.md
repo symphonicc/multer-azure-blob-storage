@@ -45,15 +45,13 @@ const resolveContentSettings: MASObjectResolver = (req: any, file: Express.Multe
 };
 
 const azureStorage: MulterAzureStorage = new MulterAzureStorage({
-    connectionString: 'DefaultEndpointsProtocol=https;AccountName=mystorageaccountname;AccountKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY;EndpointSuffix=core.windows.net',
-    accessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY',
+    authenticationType: 'azure ad',    
     accountName: 'mystorageaccountname',
     containerName: 'documents',
     blobName: resolveBlobName,
     metadata: resolveMetadata,
     contentSettings: resolveContentSettings,
     containerAccessLevel: 'blob',
-    urlExpirationTime: 60
 });
 
 const upload: multer.Instance = multer({
@@ -104,15 +102,13 @@ const resolveContentSettings = (req, file) => {
 };
 
 const azureStorage = new MulterAzureStorage({
-    connectionString: 'DefaultEndpointsProtocol=https;AccountName=mystorageaccountname;AccountKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY;EndpointSuffix=core.windows.net',
-    accessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY',
+    authenticationType: 'azure ad',  
     accountName: 'mystorageaccountname',
     containerName: 'documents',
     blobName: resolveBlobName,
     metadata: resolveMetadata,
     contentSettings: resolveContentSettings,
-    containerAccessLevel: 'blob',
-    urlExpirationTime: 60
+    containerAccessLevel: 'blob'
 });
 
 const upload = multer({
@@ -139,17 +135,19 @@ Key | Description | Note
 `mimetype` | MIME type of the file. | Added by Multer
 `blobName` | Blob/file name of created blob in Azure storage. | 
 `container` | Name of azure storage container where the blob/file was uploaded to. | 
-`blobType` | Type of blob. | From the result of call to azure's `getBlobProperties()` of `blobService`
-`size` | Size of the blob. | From the result of call to azure's `getBlobProperties()` of `blobService`
-`etag` | Etag. | From the result of call to azure's `getBlobProperties()` of `blobService`
-`metadata` | Blob's metadata. | From the result of call to azure's `getBlobProperties()` of `blobService`
-`url` | The full url to access the uploaded blob/file. | 
+`blobType` | Type of blob. | From the result of call to azure's `getProperties()` of `BlockBlobClient`
+`size` | Size of the blob. | From the result of call to azure's `getProperties()` of `BlockBlobCClient`
+`etag` | Etag. | From the result of call to azure's `getProperties()` of `BlockBlobCClient`
+`metadata` | Blob's metadata. | From the result of call to azure's `getProperties()` of `BlockBlobClient`
+`url` | The full url to access the uploaded blob/file. | obtained from 'BlockBlobClient'
 
 ### Configuration object
 Details of the configuration object that needs to be passed into the constructor of the MulterAzureStorage class.
 
 | Parameter Name | Type | Sample Value |
 |---|---|---|
+| `authenticationType` | `string` | `'azure ad'` or `'sas token'` or `'connection string'` or `'account name and key'` |
+| `sasToken` | `string` | `sp=racwdl&st=2020-02-02T02:02:02Z&se=2020-02-02T02:12:02Z&spr=https&sv=2020-02-02&sr=c&sig=xxxxx`
 | `connectionString` | `string` | `'DefaultEndpointsProtocol=https;AccountName=mystorageaccountname;AccountKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY;EndpointSuffix=core.windows.net'` |
 | `accessKey` | `string` | `'wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY'` |
 | `accountName` | `string` | `'mystorageaccountname'` |
@@ -164,8 +162,7 @@ For more information about the meaning of individual parameters please check [Az
 ### Defaults
 
 For the optional parameters in the configuration object for the MulterAzureStorage class, here are the default fallbacks:
-- `containerAccessLevel`: blob
-- `urlExpirationTime`: 60 minutes. NOTE: To unset this property and not revert to the default, pass in `-1`
+- `containerAccessLevel`: private
 - `blobName`: Date.now() + '-' + uuid.v4() + path.extname(file.originalname). This results in a url safe filename that looks like `'1511161727560-d83d24c8-d213-444c-ba72-316c7a858805.png'`
 
 ### File naming
@@ -204,18 +201,20 @@ For instructions on how to create a storage account, see the following [Azure do
 
 #### Credentials (Quick tips)
 
-Your credentials can all be obtained under the Access keys section in the storage account pane in Azure.
+`azure ad` is Microsoft's recommended method if possible, please check [Azure Documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-nodejs?tabs=connection-string%2Croles-azure-portal%2Csign-in-azure-cli#authenticate-to-azure-and-authorize-access-to-blob-data) for more details on how to configure the blob storage account.
 
-The `connectionString` is prefered. If its not provides, please provide `accessKey` and `accountName`.
+If this is not an option, `sas token` authorization allows more granular control of access to blob storage. SAS tokens can be generated through the Azure portal for storage accounts.
 
-You only need to provide one of the two access keys in the `accessKey` field.
+A valid connection string can contain a SAS token or the account name/key.
 
-The `accountName` is just the name of your storage account that you've created in Azure.
+For explicit account name and access key authentication, provide the access key available through the Azure portal, and the name of the storage account.
 
-If using the MulterAzureStorage class without passing in any configuration options then the following environment variables will need to be set:
+If using the MulterAzureStorage class without passing in any configuration options then the following environment variables will need to be set or provided in the .env file:
 1. AZURE_STORAGE_CONNECTION_STRING, for the `connectionString`.
 2. AZURE_STORAGE_ACCESS_KEY, for the `accessKey`.
 3. AZURE_STORAGE_ACCOUNT, for the `accountName`.
+4. AZURE_STORAGE_SAS_TOKEN, for the `sasToken`
+5. See [additional documentation] (https://learn.microsoft.com/en-us/javascript/api/overview/azure/identity-readme?view=azure-node-latest#defaultazurecredential) on how to configure your application to securely use Azure AD for blob storage integration. In development you must include [one of these sets of credential variables](https://learn.microsoft.com/en-us/javascript/api/overview/azure/identity-readme?view=azure-node-latest#defaultazurecredential) as environment variables or entries in .env file.
 
 ### Tests
 Not implemented yet

@@ -6,6 +6,8 @@ export declare type MetadataObj = {
 export declare type MASNameResolver = (req: Request, file: Express.Multer.File) => Promise<string>;
 export declare type MASObjectResolver = (req: Request, file: Express.Multer.File) => Promise<Object>;
 export interface IMASOptions {
+    authenticationType: 'account name and key' | 'sas token' | 'connection string' | 'app registration';
+    sasToken?: string;
     accessKey?: string;
     accountName?: string;
     connectionString?: string;
@@ -14,7 +16,7 @@ export interface IMASOptions {
     containerName: MASNameResolver | string;
     metadata?: MASObjectResolver | MetadataObj;
     contentSettings?: MASObjectResolver | MetadataObj;
-    containerAccessLevel?: string;
+    containerAccessLevel?: 'container' | 'blob' | null;
 }
 export interface MulterOutFile extends Express.Multer.File {
     url: string;
@@ -34,9 +36,8 @@ export declare class MASError implements Error {
 export declare class MulterAzureStorage implements StorageEngine {
     private readonly DEFAULT_URL_EXPIRATION_TIME;
     private readonly DEFAULT_UPLOAD_CONTAINER;
-    private readonly DEFAULT_CONTAINER_ACCESS_LEVEL;
     private _error;
-    private _blobService;
+    private _blobServiceClient;
     private _blobName;
     private _urlExpirationTime;
     private _metadata;
@@ -44,15 +45,10 @@ export declare class MulterAzureStorage implements StorageEngine {
     private _containerName;
     private _containerAccessLevel;
     constructor(options: IMASOptions);
-    _handleFile(req: Request, file: Express.Multer.File, cb: (error?: any, info?: Partial<MulterOutFile>) => void): Promise<void>;
-    _removeFile(req: Request, file: MulterOutFile, cb: (error: Error) => void): Promise<void>;
+    _handleFile(req: Request, file: Express.Multer.File, callback: (error?: any, info?: Partial<MulterOutFile>) => void): Promise<void>;
+    _removeFile(req: Request, file: MulterOutFile, callback: (error: Error) => void): Promise<void>;
     /** Helpers */
-    private _doesContainerExists;
     private _createContainerIfNotExists;
-    private _getSasToken;
-    private _getUrl;
-    private _getBlobProperties;
-    private _deleteBlobIfExists;
     private _generateBlobName;
     private _promisifyStaticValue;
     private _promisifyStaticObj;

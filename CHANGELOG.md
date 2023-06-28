@@ -22,3 +22,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 - Dependency updates
 - Remove pinning of dependency versions in favor of semantic versioning
+
+## 1.3.0 2023-06-28
+
+ - Changed dependency on azure-blob to @azure/blob-storage to allow new auth types, refactored accordingly
+ - Other dependency updates/cleanup
