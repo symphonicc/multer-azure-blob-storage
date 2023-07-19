@@ -21,7 +21,7 @@ export type MASObjectResolver = (req: Request, file: Express.Multer.File) => Pro
 
 // Custom interfaces
 export interface IMASOptions {
-    authenticationType: 'azure ad'| 'sas token' | 'connection string' |  'account name and key' ;
+    authenticationType: 'azure ad'| 'sas token' | 'connection string' |  'account name and key' | undefined | null;
     sasToken?: string;
     accessKey?: string;
     accountName?: string;
@@ -30,8 +30,7 @@ export interface IMASOptions {
     blobName?: MASNameResolver;
     containerName: MASNameResolver | string;
     metadata?: MASObjectResolver | MetadataObj;
-    contentSettings?: MASObjectResolver | MetadataObj;
-    //note, null means no public access
+    contentSettings?: MASObjectResolver | MetadataObj;    
     //https://learn.microsoft.com/en-us/javascript/api/@azure/storage-blob/containercreateoptions?view=azure-node-latest
     containerAccessLevel?: 'container' | 'blob' | 'private';
 }
@@ -60,13 +59,12 @@ export class MASError implements Error {
 }
 
 export class MulterAzureStorage implements StorageEngine {
-    private readonly DEFAULT_URL_EXPIRATION_TIME: number = 60; // Minutes
     private readonly DEFAULT_UPLOAD_CONTAINER: string = "default-container";    
 
     private _error: MASError;
-    //private _blobService: BlobService;
     private _blobServiceClient: BlobServiceClient;
     private _blobName: MASNameResolver;
+    //no longer needed, but not removed so as not to break contract
     private _urlExpirationTime: number | null;
     private _metadata: MASObjectResolver;
     private _contentSettings: MASObjectResolver;
@@ -78,68 +76,73 @@ export class MulterAzureStorage implements StorageEngine {
         let errorLength = 0;
         this._error = new MASError();        
 
+        //check to allow these values in environment file
+        options.accessKey = (options.accessKey || process.env.AZURE_STORAGE_ACCESS_KEY || null);
+        options.accountName = (options.accountName || process.env.AZURE_STORAGE_ACCOUNT || null);
+        options.sasToken = (options.sasToken || process.env.AZURE_STORAGE_SAS_TOKEN || null);
+        options.connectionString = (options.connectionString || process.env.AZURE_STORAGE_CONNECTION_STRING || null);
+
         // Container name is required
         if (!options.containerName) {
             errorLength++;
             this._error.errorList.push(new Error("Missing required parameter: Azure container name."));
         }
-
-        //check to allow these values in environment file
-        options.accessKey = (options.accessKey || process.env.AZURE_STORAGE_ACCESS_KEY || null);
-        options.accountName = (options.accountName || process.env.AZURE_STORAGE_ACCOUNT || null);
-        options.sasToken = (options.sasToken || process.env.AZURE_STORAGE_SAS_TOKEN || null);
-
-        switch (options.authenticationType){
-            case 'azure ad': {
-                const credential = new DefaultAzureCredential();
-                this._blobServiceClient = new BlobServiceClient(
-                    `https://${options.accountName}.blob.core.windows.net`,
-                    credential
-                );
-                break;
+        // Account name is required - do not try to connect to blob storage if we don't have it
+        if (!options.accountName) {
+            errorLength++;
+            this._error.errorList.push(new Error("Missing required parameter: Azure storage account name."));
+        }
+        //If explicitly AD auth
+        else if (options.authenticationType === 'azure ad'){
+            const credential = new DefaultAzureCredential();
+            this._blobServiceClient = new BlobServiceClient(
+                `https://${options.accountName}.blob.core.windows.net`,
+                credential
+            );
+        }   
+        //If explicitly sas token auth, or no auth specified but a sas token was provided     
+        else if (options.authenticationType === 'sas token' || (!options.authenticationType && options.sasToken)){            
+            if (!options.sasToken) {
+                //if explicitly SAS token, make sure the token was provided
+                errorLength++;
+                this._error.errorList.push(new Error("Missing required parameter for SAS token auth: SAS token value."));
             }
-            case 'account name and key': {
-                if (!options.accessKey) {
-                    errorLength++;
-                    this._error.errorList.push(new Error("Missing required parameter for account name/key auth: Azure blob storage access key."));                    
-                }
-                if (!options.accountName) {
-                    errorLength++;
-                    this._error.errorList.push(new Error("Missing required parameter for account name/key auth: Azure blob storage account name."));
-                }
-                if (options.accountName && options.accessKey){
-                    const sharedKeyCredential = new StorageSharedKeyCredential(options.accountName, options.accessKey);
-                    this._blobServiceClient = new BlobServiceClient(
-                    `https://${options.accountName}.blob.core.windows.net`,
-                    sharedKeyCredential
-                    );
-                }
-                break; 
-            }
-            case 'sas token': {
-                if (!options.accountName) {
-                    errorLength++;
-                    this._error.errorList.push(new Error("Missing required parameter for SAS token auth: Azure blob storage account name."));
-                }
-                if (!options.sasToken) {
-                    errorLength++;
-                    this._error.errorList.push(new Error("Missing required parameter for SAS token auth: SAS token value."));
-                }
-                if (options.accountName && options.sasToken){
-                    this._blobServiceClient = new BlobServiceClient(`https://${options.accountName}.blob.core.windows.net${options.sasToken}`);
-                }
-                break;
-            }
-            case 'connection string': {
-                options.connectionString = (options.connectionString || process.env.AZURE_STORAGE_CONNECTION_STRING || null);
-                if (!options.connectionString){
-                    errorLength++;
-                    this._error.errorList.push(new Error("Missing required parameter for connection string auth: Azure blob storage connection string."));
-                }
-                this._blobServiceClient = BlobServiceClient.fromConnectionString(options.connectionString);
-            break;
+            else{
+                this._blobServiceClient = new BlobServiceClient(`https://${options.accountName}.blob.core.windows.net${options.sasToken}`);
             }
         }
+        //If explicitly connection string auth, or no auth specified but a connection string was provided
+        else if (options.authenticationType === 'connection string' || (!options.authenticationType && options.connectionString)){            
+            if (!options.connectionString){
+                //if explicitly connection string, make sure the string was provided
+                errorLength++;
+                this._error.errorList.push(new Error("Missing required parameter for connection string auth: Azure blob storage connection string."));
+            }
+            else{
+                this._blobServiceClient = BlobServiceClient.fromConnectionString(options.connectionString);
+            }
+        }
+        //If explicitly name/key auth, or no auth specified but name/key was provided.
+        else if (options.authenticationType === 'account name and key' || (!options.authenticationType && options.accessKey)){
+            if (!options.accessKey) {
+                //If explicitly name/key, check for key.
+                errorLength++;
+                this._error.errorList.push(new Error("Missing required parameter for account name/key auth: Azure blob storage access key."));                    
+            }
+            else{
+                const sharedKeyCredential = new StorageSharedKeyCredential(options.accountName, options.accessKey);
+                this._blobServiceClient = new BlobServiceClient(
+                `https://${options.accountName}.blob.core.windows.net`,
+                sharedKeyCredential
+                );
+            }
+        }
+        else{
+            errorLength++;
+            this._error.errorList.push(new Error("No authentication information found. Check options or environment file."));
+        }
+
+        
 
         // Vaidate errors before proceeding
         if (errorLength > 0) {
@@ -162,10 +165,11 @@ export class MulterAzureStorage implements StorageEngine {
                 this._containerName = this._promisifyStaticValue(this.DEFAULT_UPLOAD_CONTAINER);
                 break;
         }        
+       
         // Check for metadata
-        if (!options.metadata) {
-            this._metadata = null;
-        } else {
+        this._metadata = null;
+        if (options.metadata) {
+          
             switch (typeof options.metadata) {
                 case "object":
                     this._metadata = this._promisifyStaticObj(<MetadataObj>options.metadata);
@@ -174,17 +178,12 @@ export class MulterAzureStorage implements StorageEngine {
                 case "function":
                     this._metadata = <MASObjectResolver>options.metadata;
                     break;
-
-                default:
-                    // Nullify all other types
-                    this._metadata = null;
-                    break;
             }
-        }
+        } 
+        
         // Check for user defined properties
-        if (!options.contentSettings) {
-            this._contentSettings = null;
-        } else {
+        this._contentSettings = null;
+        if (options.contentSettings) {
             switch (typeof options.contentSettings) {
                 case "object":
                     this._contentSettings = this._promisifyStaticObj(<MetadataObj>options.contentSettings);
@@ -193,80 +192,69 @@ export class MulterAzureStorage implements StorageEngine {
                 case "function":
                     this._contentSettings = <MASObjectResolver>options.contentSettings;
                     break;
-
-                default:
-                    // Nullify all other types
-                    this._contentSettings = null;
-                    break;
             }
         }
         // Set proper blob name
-        this._blobName = options.blobName ? options.blobName : this._generateBlobName;
-        // Set url expiration time
-        this._urlExpirationTime = (options?.urlExpirationTime === -1)
-            ? null
-            : (options.urlExpirationTime && (typeof options.urlExpirationTime === "number") && (options.urlExpirationTime > 0))
-                ? +options.urlExpirationTime
-                : this.DEFAULT_URL_EXPIRATION_TIME;
-
+        this._blobName = options.blobName ?? this._generateBlobName;
     }
 
-    //fulfill Multer contract
+    //fulfill Multer contract 
     async _handleFile(req: Request, file: Express.Multer.File, callback: (error?: any, info?: Partial<MulterOutFile>) => void) {
         // Ensure we have no errors during setup
         if (this._error.errorList.length > 0) {
-            callback(this._error, null);
-        } else {
-            // All good. Continue...
+            callback(this._error, null);            
+        } 
+        else {
+            // All good. Continue...        
+            // Begin handling file
+            try {
+                // Resolve blob name and container name
+                const blobName: string = await this._blobName(req, file);
+                const containerName: string = await this._containerName(req, file);
+                const containerClient = this._blobServiceClient.getContainerClient(containerName);
+                // Create container if it doesnt exist
+                await this._createContainerIfNotExists(containerName);
+                const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+            
+                let contentSettings: MetadataObj;
+                if (this._contentSettings == null) {
+                    contentSettings = {
+                        contentType: file.mimetype,
+                        contentDisposition: 'inline'
+                    };
+                } else {
+                    contentSettings = <MetadataObj>await this._contentSettings(req, file);
+                }
+
+                const stream = Readable.from(file.buffer);
+                const uploadOptions: BlockBlobUploadStreamOptions = {
+                    blobHTTPHeaders: { blobContentType: contentSettings.contentType, blobContentDisposition: contentSettings.contentDisposition},
+                };
+                if (this._metadata){
+                    uploadOptions.metadata = <MetadataObj>await this._metadata(req, file);
+                }
+
+                await blockBlobClient.uploadStream(stream, stream.readableHighWaterMark, 5, uploadOptions);            
+                const blobProperties = await blockBlobClient.getProperties();
+                const intermediateFile: Partial<MulterOutFile> = {
+                        url: blockBlobClient.url,
+                        blobName: blockBlobClient.name,
+                        etag: blobProperties.etag,
+                        blobType: blobProperties.blobType,
+                        metadata: blobProperties.metadata,
+                        container: blockBlobClient.containerName,
+                        blobSize: blobProperties.contentLength?.toString()
+                    };
+                const finalFile: Partial<MulterOutFile> = Object.assign({}, file, intermediateFile);
+                callback(null, finalFile);
+                }
+                catch(err){
+                    callback(err, null);
+                }
         }
-        // Begin handling file
-        try {
-            // Resolve blob name and container name
-            const blobName: string = await this._blobName(req, file);
-            const containerName: string = await this._containerName(req, file);
-            const containerClient = this._blobServiceClient.getContainerClient(containerName);
-            const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-            // Create container if it doesnt exist
-            await this._createContainerIfNotExists(containerName);
-            // Prep stream
-           
-            let contentSettings: MetadataObj;
-            if (this._contentSettings == null) {
-                contentSettings = {
-                    contentType: file.mimetype,
-                    contentDisposition: 'inline'
-                };
-            } else {
-                contentSettings = <MetadataObj>await this._contentSettings(req, file);
-            }
-
-            const stream = Readable.from(file.buffer);
-            const uploadOptions: BlockBlobUploadStreamOptions = {
-                blobHTTPHeaders: { blobContentType: contentSettings.contentType, blobContentDisposition: contentSettings.contentDisposition},
-            };
-            if (this._metadata){
-                uploadOptions.metadata = <MetadataObj>await this._metadata(req, file);
-            }
-
-            await blockBlobClient.uploadStream(stream, file.size, 5, uploadOptions);            
-            const blobProperties = await blockBlobClient.getProperties();
-            const intermediateFile: Partial<MulterOutFile> = {
-                    url: blockBlobClient.url,
-                    blobName: blockBlobClient.name,
-                    etag: blobProperties.etag,
-                    blobType: blobProperties.blobType,
-                    metadata: blobProperties.metadata,
-                    container: blockBlobClient.containerName,
-                    blobSize: blobProperties.contentLength?.toString()
-                };
-            const finalFile: Partial<MulterOutFile> = Object.assign({}, file, intermediateFile);
-            callback(null, finalFile);
-            }
-            catch(err){
-                callback(err, null);
-            }
     }
 
+    //fulfill Multer contract 
     async _removeFile(req: Request, file: MulterOutFile, callback: (error: Error) => void) {
         // Ensure we have no errors during setup
         if (this._error.errorList.length > 0) {
@@ -297,7 +285,7 @@ export class MulterAzureStorage implements StorageEngine {
         const containerClient = this._blobServiceClient.getContainerClient(name);
         const options:any = {};
         if (this._containerAccessLevel !== 'private'){
-            //Note, for private container access level, this option should not be supplied at all.
+            //For private containers, do not pass the access header
             options.access = this._containerAccessLevel;
         }
         return containerClient.createIfNotExists(options);                   

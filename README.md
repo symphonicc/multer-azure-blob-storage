@@ -201,13 +201,17 @@ For instructions on how to create a storage account, see the following [Azure do
 
 #### Credentials (Quick tips)
 
-`azure ad` is Microsoft's recommended method if possible, please check [Azure Documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-nodejs?tabs=connection-string%2Croles-azure-portal%2Csign-in-azure-cli#authenticate-to-azure-and-authorize-access-to-blob-data) for more details on how to configure the blob storage account.
+`azure ad` is Microsoft's recommended method, please check [Azure Documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-nodejs?tabs=connection-string%2Croles-azure-portal%2Csign-in-azure-cli#authenticate-to-azure-and-authorize-access-to-blob-data) for more details on how to configure the blob storage account.
 
-If this is not an option, `sas token` authorization allows more granular control of access to blob storage. SAS tokens can be generated through the Azure portal for storage accounts.
+If this is not an option, `sas token` authorization allows more granular control of access to blob storage. SAS tokens can be generated through the Azure portal for storage accounts and can be restricted to containers.
 
 A valid connection string can contain a SAS token or the account name/key.
 
-For explicit account name and access key authentication, provide the access key available through the Azure portal, and the name of the storage account.
+For explicit account name and access key authentication, provide the access key available through the Azure portal, and the name of the storage account. This method is the least secure and allows clients unrestricted access to all containers on the storage account.
+
+Never commit SAS tokens, connection strings, or access keys to version control.
+
+For backward compatibility, if no authenticaionType is provided, it will attempt to use a connection string or account name / access key.
 
 If using the MulterAzureStorage class without passing in any configuration options then the following environment variables will need to be set or provided in the .env file:
 1. AZURE_STORAGE_CONNECTION_STRING, for the `connectionString`.
