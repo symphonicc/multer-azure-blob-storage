@@ -10,7 +10,6 @@ import { v4 } from "uuid";
 import { extname } from "path";
 import { Request } from "express";
 import { StorageEngine } from "multer";
-import { Readable } from "stream";
 import { BlobServiceClient, StorageSharedKeyCredential, BlockBlobUploadStreamOptions, ContainerCreateResponse } from "@azure/storage-blob";
 import { DefaultAzureCredential } from "@azure/identity";
 
@@ -21,7 +20,7 @@ export type MASObjectResolver = (req: Request, file: Express.Multer.File) => Pro
 
 // Custom interfaces
 export interface IMASOptions {
-    authenticationType: 'azure ad'| 'sas token' | 'connection string' |  'account name and key' | undefined | null;
+    authenticationType?: 'azure ad'| 'sas token' | 'connection string' |  'account name and key' | undefined | null;
     sasToken?: string;
     accessKey?: string;
     accountName?: string;
@@ -87,8 +86,19 @@ export class MulterAzureStorage implements StorageEngine {
             errorLength++;
             this._error.errorList.push(new Error("Missing required parameter: Azure container name."));
         }
-        // Account name is required - do not try to connect to blob storage if we don't have it
-        if (!options.accountName) {
+        //If explicitly connection string auth, or no auth specified but a connection string was provided
+        else if (options.authenticationType === 'connection string' || (!options.authenticationType && options.connectionString)){            
+            if (!options.connectionString){
+                //if explicitly connection string, make sure the string was provided
+                errorLength++;
+                this._error.errorList.push(new Error("Missing required parameter for connection string auth: Azure blob storage connection string."));
+            }
+            else{
+                this._blobServiceClient = BlobServiceClient.fromConnectionString(options.connectionString);
+            }
+        }
+        //If this is not connection string auth then account name is required
+        else if (!options.accountName) {
             errorLength++;
             this._error.errorList.push(new Error("Missing required parameter: Azure storage account name."));
         }
@@ -108,20 +118,9 @@ export class MulterAzureStorage implements StorageEngine {
                 this._error.errorList.push(new Error("Missing required parameter for SAS token auth: SAS token value."));
             }
             else{
-                this._blobServiceClient = new BlobServiceClient(`https://${options.accountName}.blob.core.windows.net${options.sasToken}`);
+                this._blobServiceClient = new BlobServiceClient(`https://${options.accountName}.blob.core.windows.net?${options.sasToken}`);
             }
-        }
-        //If explicitly connection string auth, or no auth specified but a connection string was provided
-        else if (options.authenticationType === 'connection string' || (!options.authenticationType && options.connectionString)){            
-            if (!options.connectionString){
-                //if explicitly connection string, make sure the string was provided
-                errorLength++;
-                this._error.errorList.push(new Error("Missing required parameter for connection string auth: Azure blob storage connection string."));
-            }
-            else{
-                this._blobServiceClient = BlobServiceClient.fromConnectionString(options.connectionString);
-            }
-        }
+        }        
         //If explicitly name/key auth, or no auth specified but name/key was provided.
         else if (options.authenticationType === 'account name and key' || (!options.authenticationType && options.accessKey)){
             if (!options.accessKey) {
@@ -226,7 +225,7 @@ export class MulterAzureStorage implements StorageEngine {
                     contentSettings = <MetadataObj>await this._contentSettings(req, file);
                 }
 
-                const stream = Readable.from(file.buffer);
+                //const stream = Readable.from(file.stream);
                 const uploadOptions: BlockBlobUploadStreamOptions = {
                     blobHTTPHeaders: { blobContentType: contentSettings.contentType, blobContentDisposition: contentSettings.contentDisposition},
                 };
@@ -234,7 +233,7 @@ export class MulterAzureStorage implements StorageEngine {
                     uploadOptions.metadata = <MetadataObj>await this._metadata(req, file);
                 }
 
-                await blockBlobClient.uploadStream(stream, stream.readableHighWaterMark, 5, uploadOptions);            
+                await blockBlobClient.uploadStream(file.stream, file.stream.readableHighWaterMark, 5, uploadOptions);            
                 const blobProperties = await blockBlobClient.getProperties();
                 const intermediateFile: Partial<MulterOutFile> = {
                         url: blockBlobClient.url,

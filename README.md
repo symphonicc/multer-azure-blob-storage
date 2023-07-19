@@ -211,14 +211,15 @@ For explicit account name and access key authentication, provide the access key 
 
 Never commit SAS tokens, connection strings, or access keys to version control.
 
-For backward compatibility, if no authenticaionType is provided, it will attempt to use a connection string or account name / access key.
+For backward compatibility, if no authenticationType is provided, it will attempt to use a connection string or account name / access key.
 
 If using the MulterAzureStorage class without passing in any configuration options then the following environment variables will need to be set or provided in the .env file:
-1. AZURE_STORAGE_CONNECTION_STRING, for the `connectionString`.
-2. AZURE_STORAGE_ACCESS_KEY, for the `accessKey`.
-3. AZURE_STORAGE_ACCOUNT, for the `accountName`.
-4. AZURE_STORAGE_SAS_TOKEN, for the `sasToken`
-5. See [additional documentation] (https://learn.microsoft.com/en-us/javascript/api/overview/azure/identity-readme?view=azure-node-latest#defaultazurecredential) on how to configure your application to securely use Azure AD for blob storage integration. In development you must include [one of these sets of credential variables](https://learn.microsoft.com/en-us/javascript/api/overview/azure/identity-readme?view=azure-node-latest#defaultazurecredential) as environment variables or entries in .env file.
+
+1. For authentication with `azure ad`, See [additional documentation] (https://learn.microsoft.com/en-us/javascript/api/overview/azure/identity-readme?view=azure-node-latest#defaultazurecredential) on how to configure your application to securely use Azure AD for blob storage integration. In development you must include [one of these sets of credential variables](https://learn.microsoft.com/en-us/javascript/api/overview/azure/identity-readme?view=azure-node-latest#defaultazurecredential) as environment variables or entries in .env file.
+2. AZURE_STORAGE_CONNECTION_STRING, for the `connectionString`.
+3. AZURE_STORAGE_ACCESS_KEY, for the `accessKey`.
+4. AZURE_STORAGE_ACCOUNT, for the `accountName`.
+5. AZURE_STORAGE_SAS_TOKEN, for the `sasToken`
 
 ### Tests
 Not implemented yet
