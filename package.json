@@ -1,7 +1,7 @@
 {
-  "name": "multer-azure-blob-storage",
+  "name": "multer-az-storage-blob",
   "version": "1.3.0",
-  "description": "ES5/6 & Typescript friendly multer storage engine for Azure's blob storage.",
+  "description": "ES5/6 & Typescript friendly multer storage engine for Azure's blob storage using @azure/storage-blob.",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "scripts": {
@@ -12,10 +12,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Sliverb/multer-azure-blob-storage.git"
+    "url": "https://github.com/sschwinn-fdot/multer-atazure-storage-blob.git"
   },
   "bugs": {
-    "url": "https://github.com/Sliverb/multer-azure-blob-storage/issues"
+    "url": "https://github.com/sschwinn-fdot/multer-atazure-storage-blob/issues"
   },
   "keywords": [
     "multer",
@@ -27,9 +27,10 @@
     "typescript",
     "ES5",
     "ES6",
-    "@azure/blob-storage"
+    "@azure/blob-storage",
+    "azure ad authentication"
   ],
-  "author": "Bayo O",
+  "author": "Stephanie S",
   "license": "MIT",
   "private": false,
   "devDependencies": {

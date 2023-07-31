@@ -25,5 +25,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## 1.3.0 2023-06-28
 
- - Changed dependency on azure-blob to @azure/blob-storage to allow new auth types, refactored accordingly
+ - Rename to multer-azure-storage-blob as this has become a new package.
+ - Changed dependency on azure-blob to @azure/storage-blob to allow new auth types, refactored accordingly
  - Other dependency updates/cleanup

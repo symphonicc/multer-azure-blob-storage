@@ -3,14 +3,16 @@
 
 ES6 &amp; Typescript friendly [Multer](https://github.com/expressjs/multer) storage engine for Azure's blob storage.
 
+Adapted from package [multer-azure-blob-storage](https://www.npmjs.com/package/multer-azure-blob-storage), updated to use a more recent blob storage dependency. All attempts were made to be backwards compatible, please report any issues if you switch to this package for existing code.
+
 ### Installation
 
 ```
-npm i -S multer-azure-blob-storage
+npm i -S multer-az-storage-blob
 ```
 or
 ```
-yarn add multer-azure-blob-storage
+yarn add multer-az-storage-blob
 ```
 
 ### Usage
@@ -142,20 +144,20 @@ Key | Description | Note
 `url` | The full url to access the uploaded blob/file. | obtained from 'BlockBlobClient'
 
 ### Configuration object
-Details of the configuration object that needs to be passed into the constructor of the MulterAzureStorage class.
+Details of the configuration object that needs to be passed into the constructor of the MulterAzureStorage class. MulterAzureStorageBlob was adapted from MulterAzureBlobStorage, a package using an older blob storage dependency. All attempts were made to ensure backward compatibility for code using the alternate so many configuration variables are not required or can be passed via environment variables instead.
 
-| Parameter Name | Type | Sample Value |
-|---|---|---|
-| `authenticationType` | `string` | `'azure ad'` or `'sas token'` or `'connection string'` or `'account name and key'` |
-| `sasToken` | `string` | `sp=racwdl&st=2020-02-02T02:02:02Z&se=2020-02-02T02:12:02Z&spr=https&sv=2020-02-02&sr=c&sig=xxxxx`
-| `connectionString` | `string` | `'DefaultEndpointsProtocol=https;AccountName=mystorageaccountname;AccountKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY;EndpointSuffix=core.windows.net'` |
-| `accessKey` | `string` | `'wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY'` |
-| `accountName` | `string` | `'mystorageaccountname'` |
-| `containerName` | `string` or `function: MASNameResolver` | `'documents'` or `(req: any, file: Express.Multer.File) => Promise<string>` |
-| `metadata` | `{ [k: string]: string }` or `function: MASObjectResolver` | `'{author: John Doe; album: ASOT}'` or `(req: any, file: Express.Multer.File) => Promise<{[k: string]: string}>` |
-| `blobName` | `function: MASNameResolver` (optional) | `(req: any, file: Express.Multer.File) => Promise<string>` |
-| `containerAccessLevel` | `string` (optional) | `'blob'` or `'container'` or `'private'` |
-| `urlExpirationTime` | `number` (optional) | `60` |
+| Parameter Name | Type | Note | Sample Value |
+|---|---|---|---|
+| `authenticationType` | `string`(optional) | `If not specified, will attempt to authenticate based on what auth info is provided.`|`'azure ad'` or `'sas token'` or `'connection string'` or `'account name and key'` |
+| `sasToken` | `string` | `Can also be provided as env. variable AZURE_STORAGE_SAS_TOKEN` | `sp=racwdl&st=2020-02-02T02:02:02Z&se=2020-02-02T02:12:02Z&spr=https&sv=2020-02-02&sr=c&sig=xxxxx`
+| `connectionString` | `string` | `Can also be provided as env. variable AZURE_STORAGE_CONNECTION_STRING.` | `'DefaultEndpointsProtocol=https;AccountName=mystorageaccountname;AccountKey=wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY;EndpointSuffix=core.windows.net'` |
+| `accessKey` | `string` | `Can also be provided as env. variable AZURE_STORAGE_ACCESS_KEY` | `'wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY'` |
+| `accountName` | `string` |  `Can also be provided as env. variable AZURE_STORAGE_ACCOUNT` | `'mystorageaccountname'` |
+| `containerName` | `string` or `function: MASNameResolver` | | `'documents'` or `(req: any, file: Express.Multer.File) => Promise<string>` |
+| `metadata` | `{ [k: string]: string }` or `function: MASObjectResolver` | `This metadata will be passed to Azure Blob Storage` |`'{author: John Doe; album: ASOT}'` or `(req: any, file: Express.Multer.File) => Promise<{[k: string]: string}>` |
+| `blobName` | `function: MASNameResolver` (optional) |  |`(req: any, file: Express.Multer.File) => Promise<string>` |
+| `containerAccessLevel` | `string` (optional) |  | `'blob'` or `'container'` or `'private'` |
+| `urlExpirationTime` | `number` (optional) | `This field is now deprecated and unused, but remains in the signature for legacy code.` | `60` |
 
 For more information about the meaning of individual parameters please check [Azure documentation](https://azure.microsoft.com/en-us/documentation/articles/storage-nodejs-how-to-use-blob-storage/) on node.js integration.
 
@@ -164,14 +166,14 @@ For more information about the meaning of individual parameters please check [Az
 For the optional parameters in the configuration object for the MulterAzureStorage class, here are the default fallbacks:
 - `containerAccessLevel`: private
 - `blobName`: Date.now() + '-' + uuid.v4() + path.extname(file.originalname). This results in a url safe filename that looks like `'1511161727560-d83d24c8-d213-444c-ba72-316c7a858805.png'`
-
+`urlExpirationTime`: used in a previous version of this package, it is retained for backwards compatibility, but no longer used.
 ### File naming
 
 The `containerName` can be anything you choose, as long as it's unique to the storage account and as long as it fits Azure's naming restrictions. If the container does not exist the storage engine will create it.
 
 The `blobName` in an Azure container also needs to have a unique name.
 
-`multer-azure-blob-storage` allows you to customize the `containerName` and `blobName` per request before uploading the file. This can be done by proving a `MASNameResolver` function in the configuation object for the desired parameter.
+`multer-azure-storage-blob` allows you to customize the `containerName` and `blobName` per request before uploading the file. This can be done by proving a `MASNameResolver` function in the configuation object for the desired parameter.
 ``` javascript
 const resolveName: MASNameResolver = (req: any, file: Express.Multer.File): Promise<string> => {
     return new Promise<string>((resolve, reject) => {
@@ -182,7 +184,7 @@ const resolveName: MASNameResolver = (req: any, file: Express.Multer.File): Prom
 };
 ```
 
-`multer-azure-blob-storage` also allows you to add/customize `metadata` and `contentSettings` per request before uploading the file. This can be done by proving a `MASObjectResolver` function in the configuation object for the desired parameter.
+`multer-azure-storage-blob` also allows you to add/customize `metadata` and `contentSettings` per request before uploading the file. This can be done by proving a `MASObjectResolver` function in the configuation object for the desired parameter.
 ``` javascript
 export type MetadataObj = { [k: string]: string };
 const resolveMetadata: MASObjectResolver = (req: any, file: Express.Multer.File): Promise<MetadataObj> => {
@@ -207,13 +209,13 @@ If this is not an option, `sas token` authorization allows more granular control
 
 A valid connection string can contain a SAS token or the account name/key.
 
-For explicit account name and access key authentication, provide the access key available through the Azure portal, and the name of the storage account. This method is the least secure and allows clients unrestricted access to all containers on the storage account.
+For explicit account name and access key authentication, provide the account's access key available through the Azure portal, and the name of the storage account. This method is the least secure and allows clients unrestricted access to all containers on the storage account.
 
 Never commit SAS tokens, connection strings, or access keys to version control.
 
 For backward compatibility, if no authenticationType is provided, it will attempt to use a connection string or account name / access key.
 
-If using the MulterAzureStorage class without passing in any configuration options then the following environment variables will need to be set or provided in the .env file:
+MulterAzureStorage will preferentially use configuration options as passed in. If they are not passed in, it will check for them as environment variables with the keys below.
 
 1. For authentication with `azure ad`, See [additional documentation] (https://learn.microsoft.com/en-us/javascript/api/overview/azure/identity-readme?view=azure-node-latest#defaultazurecredential) on how to configure your application to securely use Azure AD for blob storage integration. In development you must include [one of these sets of credential variables](https://learn.microsoft.com/en-us/javascript/api/overview/azure/identity-readme?view=azure-node-latest#defaultazurecredential) as environment variables or entries in .env file.
 2. AZURE_STORAGE_CONNECTION_STRING, for the `connectionString`.
@@ -228,6 +230,7 @@ Not implemented yet
 All great things are built on the shoulder of giants. I want to thank my giants for lending their shoulders:
 - [mckalexee](https://github.com/mckalexee/multer-azure)
 - [MantaCodeDevs](https://github.com/MantaCodeDevs/multer-azure-storage)
+- [Symphonicc and Bayo O](https://github.com/symphonicc/multer-azure-blob-storage)
 
 
 ### License

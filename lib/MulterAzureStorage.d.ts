@@ -6,7 +6,7 @@ export declare type MetadataObj = {
 export declare type MASNameResolver = (req: Request, file: Express.Multer.File) => Promise<string>;
 export declare type MASObjectResolver = (req: Request, file: Express.Multer.File) => Promise<Object>;
 export interface IMASOptions {
-    authenticationType: 'account name and key' | 'sas token' | 'connection string' | 'app registration';
+    authenticationType?: 'azure ad' | 'sas token' | 'connection string' | 'account name and key' | undefined | null;
     sasToken?: string;
     accessKey?: string;
     accountName?: string;
@@ -16,7 +16,7 @@ export interface IMASOptions {
     containerName: MASNameResolver | string;
     metadata?: MASObjectResolver | MetadataObj;
     contentSettings?: MASObjectResolver | MetadataObj;
-    containerAccessLevel?: 'container' | 'blob' | null;
+    containerAccessLevel?: 'container' | 'blob' | 'private';
 }
 export interface MulterOutFile extends Express.Multer.File {
     url: string;
@@ -34,7 +34,6 @@ export declare class MASError implements Error {
     constructor(message?: string);
 }
 export declare class MulterAzureStorage implements StorageEngine {
-    private readonly DEFAULT_URL_EXPIRATION_TIME;
     private readonly DEFAULT_UPLOAD_CONTAINER;
     private _error;
     private _blobServiceClient;
